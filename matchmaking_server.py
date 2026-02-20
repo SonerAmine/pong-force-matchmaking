@@ -183,11 +183,24 @@ class RoomManager:
             if len(room["players"]) >= room["max_players"]:
                 return {"success": False, "error": "Room is full"}
 
-            if player_name in room["players"]:
-                return {"success": False, "error": "Player name already in use"}
+            # Si le nom est déjà utilisé, ajouter un suffixe unique
+            original_name = player_name
+            final_name = player_name
+            suffix = 1
+            
+            while final_name in room["players"]:
+                final_name = f"{original_name}_{suffix}"
+                suffix += 1
+                # Limite de sécurité pour éviter une boucle infinie
+                if suffix > 100:
+                    final_name = f"{original_name}_{uuid.uuid4().hex[:4]}"
+                    break
+            
+            if final_name != original_name:
+                logger.info(f"Player name '{original_name}' already in use, using '{final_name}' instead")
 
-            # Ajoute le joueur
-            room["players"].append(player_name)
+            # Ajoute le joueur avec le nom final (peut être modifié)
+            room["players"].append(final_name)
             room["last_activity"] = datetime.now().isoformat()
 
             # Si la room est pleine, démarre le jeu
@@ -195,7 +208,7 @@ class RoomManager:
                 room["status"] = "in_progress"
 
             self.save_rooms()
-            logger.info(f"Player {player_name} joined room {room_code}")
+            logger.info(f"Player {final_name} joined room {room_code} (original name: {original_name})")
 
             return {
                 "success": True,
@@ -203,7 +216,9 @@ class RoomManager:
                 "host_port": room["host"]["port"],
                 "public_ip": room["host"]["public_ip"],
                 "players": room["players"],
-                "status": room["status"]
+                "status": room["status"],
+                "player_name": final_name,  # Retourne le nom final utilisé
+                "name_changed": final_name != original_name  # Indique si le nom a été modifié
             }
 
     def update_room_status(self, room_code, status):
