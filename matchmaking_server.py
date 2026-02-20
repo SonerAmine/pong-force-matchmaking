@@ -276,9 +276,37 @@ room_manager = RoomManager()
 
 # ================ ROUTES API ================
 
-@app.route('/health', methods=['GET'])
+@app.route('/', methods=['GET', 'HEAD', 'OPTIONS'])
+def home():
+    """Page d'accueil du serveur"""
+    if request.method == 'HEAD':
+        return '', 200
+    if request.method == 'OPTIONS':
+        return '', 200, {'Allow': 'GET, HEAD, OPTIONS'}
+    
+    return jsonify({
+        "name": "Pong Force Matchmaking Server",
+        "status": "online",
+        "version": "1.0.0",
+        "endpoints": {
+            "/health": "Server health check",
+            "/api/create_room": "Create a new room (POST)",
+            "/api/join_room": "Join an existing room (POST)",
+            "/api/room/<code>": "Get room info (GET)",
+            "/api/rooms": "List all rooms (GET)"
+        },
+        "active_rooms": len(active_rooms),
+        "timestamp": datetime.now().isoformat()
+    })
+
+@app.route('/health', methods=['GET', 'HEAD', 'OPTIONS'])
 def health_check():
     """Vérifie que le serveur est en ligne"""
+    if request.method == 'HEAD':
+        return '', 200
+    if request.method == 'OPTIONS':
+        return '', 200, {'Allow': 'GET, HEAD, OPTIONS'}
+    
     return jsonify({
         "status": "online",
         "timestamp": datetime.now().isoformat(),
